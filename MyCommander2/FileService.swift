@@ -186,6 +186,14 @@ class FileService {
         try content.write(to: url, atomically: true, encoding: .utf8)
     }
     
+    /// Fájl megnyitása az alapértelmezett macOS alkalmazással
+    func openFile(at url: URL) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = [url.path]
+        try process.run()
+    }
+    
     /// Két fájl vagy könyvtár összehasonlítása Meld-del
     func compareWithMeld(file1: URL, file2: URL) throws {
         let process = Process()

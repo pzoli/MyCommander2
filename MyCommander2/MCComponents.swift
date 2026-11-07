@@ -155,6 +155,12 @@ struct CommandLineView: View {
                         appState.runCommand()
                     }
             }
+            .onChange(of: appState.shouldFocusCommandPrompt) { _, shouldFocus in
+                if shouldFocus {
+                    isPromptFocused = true
+                    appState.shouldFocusCommandPrompt = false
+                }
+            }
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(Color.black)

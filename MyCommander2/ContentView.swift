@@ -224,6 +224,15 @@ struct ContentView: View {
             return event
         }
         
+        // Cmd + Enter: az aktív elem nevének beillesztése a command promptba
+        if event.modifierFlags.contains(.command) && (keyCode == 36 || keyCode == 76) {
+            if let item = appState.currentActivePanel.selectedItem {
+                appState.commandInput += item.name
+                appState.shouldFocusCommandPrompt = true
+            }
+            return nil
+        }
+        
         // 4. Fő nézet: Fájllista irányítása
         // A fel-le nyilak és Enter mindig a fájllistát vezérlik ha a parancssor nem kapott kifejezetten enter parancsot
         switch keyCode {

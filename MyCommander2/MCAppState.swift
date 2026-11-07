@@ -199,6 +199,7 @@ class MCAppState {
     var activePanel: PanelSide = .left
     var activeDialog: ActiveDialog? = nil
     var commandInput: String = ""
+    var shouldFocusCommandPrompt: Bool = false
     var statusMessage: String = "Midnight Commander for macOS - Ready"
     
     init() {
@@ -292,8 +293,12 @@ class MCAppState {
         } else if item.isDirectory {
             currentActivePanel.navigateTo(directory: item.url)
         } else {
-            // Fájl esetén F3 megtekintés
-            activeDialog = .view(item.url)
+            do {
+                try FileService.shared.openFile(at: item.url)
+                statusMessage = "Opening \(item.name)"
+            } catch {
+                statusMessage = "Open error: \(error.localizedDescription)"
+            }
         }
     }
     
