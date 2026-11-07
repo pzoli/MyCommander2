@@ -7,6 +7,7 @@ struct FilePanelView: View {
     let onSelect: () -> Void
     let onOpen: () -> Void
     @State private var visibleRowIDs: Set<String> = []
+    @FocusState private var isFilterFocused: Bool
     
     var body: some View {
         VStack(spacing: 0) {
@@ -34,6 +35,9 @@ struct FilePanelView: View {
             RoundedRectangle(cornerRadius: 2)
                 .stroke(isActive ? MCTheme.activeBorder : MCTheme.panelBorder, lineWidth: isActive ? 2 : 1)
         )
+        .onChange(of: isFilterFocused) { _, focused in
+            panelState.isFilterFocused = focused
+        }
         .contentShape(Rectangle())
         .onTapGesture {
             onSelect()
@@ -228,6 +232,13 @@ struct FilePanelView: View {
                 TextField("", text: $panelState.filterText)
                     .textFieldStyle(.plain)
                     .font(MCTheme.monoSmall)
+                    .focused($isFilterFocused)
+                    .onChange(of: panelState.shouldFocusFilter) { _, shouldFocus in
+                        if shouldFocus {
+                            isFilterFocused = true
+                            panelState.shouldFocusFilter = false
+                        }
+                    }
                     .foregroundColor(.white)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)

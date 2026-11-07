@@ -180,7 +180,14 @@ struct ContentView: View {
             return nil
         }
         
-        // 2. Cmd + Y: Összehasonlítás Meld-del
+        // 2. Cmd + F: Az aktív panel filter mezőjének fókuszálása
+        let isFKey = (keyCode == 3 || event.charactersIgnoringModifiers?.lowercased() == "f")
+        if event.modifierFlags.contains(.command) && isFKey && appState.activeDialog == nil {
+            appState.currentActivePanel.shouldFocusFilter = true
+            return nil
+        }
+        
+        // 3. Cmd + Y: Összehasonlítás Meld-del
         let isYKey = (keyCode == 16 || event.charactersIgnoringModifiers?.lowercased() == "y")
         if event.modifierFlags.contains(.command) && isYKey {
             appState.compareWithMeld()
@@ -195,7 +202,18 @@ struct ContentView: View {
             return nil
         }
         
-        // 3. Ha modális párbeszédablak van nyitva (F5, F6, F7, F8, F1, F3, F4, Terminal)
+        // Escape a filter mezőben: filter törlése és visszatérés a listához
+        if keyCode == 53 &&
+            appState.activeDialog == nil &&
+            appState.currentActivePanel.isFilterFocused {
+            appState.currentActivePanel.filterText = ""
+            appState.currentActivePanel.isFilterFocused = false
+            NSApp.keyWindow?.makeFirstResponder(nil)
+            isWindowFocused = true
+            return nil
+        }
+        
+        // 4. Ha modális párbeszédablak van nyitva (F5, F6, F7, F8, F1, F3, F4, Terminal)
         if let activeDialog = appState.activeDialog {
             if keyCode == 53 { // Escape
                 appState.activeDialog = nil

@@ -13,6 +13,8 @@ class PanelState {
     var sortOrder: SortOrder = .ascending
     var showHidden: Bool = false
     var filterText: String = ""
+    var shouldFocusFilter: Bool = false
+    var isFilterFocused: Bool = false
     
     init(directory: URL) {
         self.currentDirectory = directory.standardizedFileURL
