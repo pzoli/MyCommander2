@@ -91,6 +91,8 @@ struct ContentView: View {
         }
         .onKeyPress(.space) {
             guard appState.activeDialog == nil else { return .ignored }
+            guard !isTextInputFocused else { return .ignored }
+            
             if let item = appState.currentActivePanel.selectedItem, !item.isParentDir {
                 appState.currentActivePanel.toggleMark(for: item.url)
                 appState.currentActivePanel.moveSelection(by: 1)
@@ -142,6 +144,14 @@ struct ContentView: View {
             }
             isWindowFocused = true
         }
+    }
+    
+    private var isTextInputFocused: Bool {
+        guard let firstResponder = NSApp.keyWindow?.firstResponder else {
+            return false
+        }
+        
+        return firstResponder is NSTextField || firstResponder is NSTextView
     }
     
     // MARK: - Robusztus ablakszintű billentyűzetfigyelő (NSEvent Monitor)
@@ -234,6 +244,10 @@ struct ContentView: View {
             return nil
             
         case 49: // Space -> Kijelölés / Taggelés váltása
+            guard !isTextInputFocused else {
+                return event
+            }
+            
             if let item = appState.currentActivePanel.selectedItem, !item.isParentDir {
                 appState.currentActivePanel.toggleMark(for: item.url)
                 appState.currentActivePanel.moveSelection(by: 1)
