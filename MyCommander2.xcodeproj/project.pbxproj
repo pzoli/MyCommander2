@@ -10,9 +10,22 @@
 		000000000000000000000120 /* MyCommander2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MyCommander2.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		11A1296E309FCBA5000A4B1E /* Exceptions for "MyCommander2" folder in "MyCommander2" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 000000000000000100000000 /* MyCommander2 */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		000000000000000000000010 /* MyCommander2 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				11A1296E309FCBA5000A4B1E /* Exceptions for "MyCommander2" folder in "MyCommander2" target */,
+			);
 			path = MyCommander2;
 			sourceTree = "<group>";
 		};
@@ -250,12 +263,15 @@
 		000000000000000111000000 /* Debug configuration for PBXNativeTarget "MyCommander2" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8T2LXPXWYH;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MyCommander2/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -287,12 +303,15 @@
 		000000000000000112000000 /* Release configuration for PBXNativeTarget "MyCommander2" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8T2LXPXWYH;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MyCommander2/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
