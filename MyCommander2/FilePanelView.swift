@@ -6,6 +6,7 @@ struct FilePanelView: View {
     let isActive: Bool
     let onSelect: () -> Void
     let onOpen: () -> Void
+    @State private var visibleRowIDs: Set<String> = []
     
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +28,7 @@ struct FilePanelView: View {
             // Alsó sáv: Információk és gyorsműveletek
             footerView
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MCTheme.panelBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 2)
@@ -183,18 +185,33 @@ struct FilePanelView: View {
                                 panelState.toggleMark(for: item.url)
                             }
                         )
-                        .id("\(item.id)_\(isActive)")
+                        .onGeometryChange(for: Bool.self) { geometry in
+                            let frame = geometry.frame(in: .scrollView)
+                            let bounds = geometry.bounds(of: .scrollView) ?? .zero
+                            let visibleBounds = CGRect(origin: .zero, size: bounds.size)
+                            return frame.height > 0 && visibleBounds.contains(frame)
+                        } action: { isVisible in
+                            if isVisible {
+                                visibleRowIDs.insert(item.id)
+                            } else {
+                                visibleRowIDs.remove(item.id)
+                            }
+                        }
+                        .id(item.id)
                     }
                 }
                 .padding(.vertical, 2)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .id(panelState.currentDirectory.path)
-            .onChange(of: panelState.selectedItemId) { _, newId in
-                if let newId {
-                    withAnimation(.easeInOut(duration: 0.08)) {
-                        proxy.scrollTo("\(newId)_\(isActive)", anchor: .center)
-                    }
+            .onChange(of: panelState.selectedIndex) { oldIndex, newIndex in
+                guard let selectedItemId = panelState.selectedItemId,
+                      !visibleRowIDs.contains(selectedItemId) else {
+                    return
                 }
+                
+                let anchor: UnitPoint = newIndex < oldIndex ? .top : .bottom
+                scrollToSelection(selectedItemId, using: proxy, anchor: anchor)
             }
         }
     }
@@ -247,6 +264,25 @@ struct FilePanelView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(Color(red: 0.0, green: 0.15, blue: 0.4))
+        }
+    }
+    
+    private func scrollToSelection(
+        _ newId: String?,
+        using proxy: ScrollViewProxy,
+        anchor: UnitPoint
+    ) {
+        guard let newId else { return }
+        
+        // A LazyVStack elemei csak a renderelési ciklus végén biztosan
+        // elérhetők a ScrollViewReader számára. Animáció nélkül görgetünk,
+        // hogy gyors billentyűismétlésnél ne torlódjanak fel régi célpontok.
+        DispatchQueue.main.async {
+            var transaction = Transaction()
+            transaction.animation = nil
+            withTransaction(transaction) {
+                proxy.scrollTo(newId, anchor: anchor)
+            }
         }
     }
     
