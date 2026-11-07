@@ -233,6 +233,18 @@ struct ContentView: View {
             }
             return nil
             
+        case 51: // Backspace -> Visszalépés a szülőkönyvtárba
+            guard appState.commandInput.isEmpty else {
+                return event
+            }
+            
+            let currentDirectory = appState.currentActivePanel.currentDirectory
+            let parentDirectory = currentDirectory.deletingLastPathComponent().standardizedFileURL
+            if parentDirectory.path != currentDirectory.path {
+                appState.currentActivePanel.navigateTo(directory: parentDirectory)
+            }
+            return nil
+            
         // F1 - F10 Funkcióbillentyűk
         case 122: // F1
             appState.triggerAction(1)
