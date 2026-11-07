@@ -35,6 +35,9 @@ struct TopMenuBarView: View {
             
             menuItem(title: "Command") {
                 Button("Compare with Meld (⌘Y)") { appState.compareWithMeld() }
+                Button("Sync Opposite Panel Directory (⌘L)") {
+                    appState.syncInactivePanelDirectory()
+                }
                 Button("Switch Active Panel (Tab / F9)") { appState.switchPanel() }
                 Button("Reload Both Panels") {
                     appState.leftPanel.refresh()

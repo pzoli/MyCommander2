@@ -219,6 +219,10 @@ class MCAppState {
         activePanel = (activePanel == .left) ? .right : .left
     }
     
+    func syncInactivePanelDirectory() {
+        inactivePanel.navigateTo(directory: currentActivePanel.currentDirectory)
+    }
+    
     // Műveletek elindítása az aktív panel alapján
     func triggerAction(_ fnNumber: Int) {
         switch fnNumber {

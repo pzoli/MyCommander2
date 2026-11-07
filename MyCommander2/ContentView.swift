@@ -163,7 +163,14 @@ struct ContentView: View {
     private func handleKeyDown(event: NSEvent) -> NSEvent? {
         let keyCode = event.keyCode
         
-        // 1. Cmd + Y: Összehasonlítás Meld-del
+        // 1. Cmd + L: Az inaktív panel könyvtárának igazítása az aktív panelhez
+        let isLKey = (keyCode == 37 || event.charactersIgnoringModifiers?.lowercased() == "l")
+        if event.modifierFlags.contains(.command) && isLKey && appState.activeDialog == nil {
+            appState.syncInactivePanelDirectory()
+            return nil
+        }
+        
+        // 2. Cmd + Y: Összehasonlítás Meld-del
         let isYKey = (keyCode == 16 || event.charactersIgnoringModifiers?.lowercased() == "y")
         if event.modifierFlags.contains(.command) && isYKey {
             appState.compareWithMeld()
