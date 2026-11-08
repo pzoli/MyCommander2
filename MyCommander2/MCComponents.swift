@@ -155,15 +155,34 @@ struct CommandLineView: View {
                         appState.runCommand()
                     }
             }
+            .onChange(of: isPromptFocused) { _, focused in
+                appState.isCommandPromptFocused = focused
+                if focused {
+                    placeCaretAtEnd()
+                }
+            }
             .onChange(of: appState.shouldFocusCommandPrompt) { _, shouldFocus in
                 if shouldFocus {
                     isPromptFocused = true
                     appState.shouldFocusCommandPrompt = false
+                    placeCaretAtEnd()
                 }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(Color.black)
+        }
+    }
+    
+    private func placeCaretAtEnd() {
+        DispatchQueue.main.async {
+            guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView else {
+                return
+            }
+            
+            let length = (editor.string as NSString).length
+            editor.setSelectedRange(NSRange(location: length, length: 0))
+            editor.scrollRangeToVisible(NSRange(location: length, length: 0))
         }
     }
 }

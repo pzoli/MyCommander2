@@ -202,6 +202,7 @@ class MCAppState {
     var activeDialog: ActiveDialog? = nil
     var commandInput: String = ""
     var shouldFocusCommandPrompt: Bool = false
+    var isCommandPromptFocused: Bool = false
     var statusMessage: String = "Midnight Commander for macOS - Ready"
     
     init() {

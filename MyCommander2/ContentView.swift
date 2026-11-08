@@ -202,6 +202,17 @@ struct ContentView: View {
             return nil
         }
         
+        // Escape a command promptban: tartalom törlése és visszatérés a listához
+        if keyCode == 53 &&
+            appState.activeDialog == nil &&
+            appState.isCommandPromptFocused {
+            appState.commandInput = ""
+            appState.isCommandPromptFocused = false
+            NSApp.keyWindow?.makeFirstResponder(nil)
+            isWindowFocused = true
+            return nil
+        }
+        
         // Escape a filter mezőben: filter törlése és visszatérés a listához
         if keyCode == 53 &&
             appState.activeDialog == nil &&
@@ -282,6 +293,9 @@ struct ContentView: View {
             return nil
             
         case 51: // Backspace -> Visszalépés a szülőkönyvtárba
+            guard !appState.isCommandPromptFocused else {
+                return event
+            }
             guard appState.commandInput.isEmpty else {
                 return event
             }
@@ -326,8 +340,32 @@ struct ContentView: View {
             return nil
             
         default:
+            if shouldRouteKeyToCommandPrompt(event) {
+                appState.commandInput += event.characters ?? ""
+                appState.shouldFocusCommandPrompt = true
+                return nil
+            }
             return event
         }
+    }
+    
+    private func shouldRouteKeyToCommandPrompt(_ event: NSEvent) -> Bool {
+        guard !isTextInputFocused else {
+            return false
+        }
+        
+        let blockedModifiers: NSEvent.ModifierFlags = [.command, .control, .option]
+        guard event.modifierFlags.intersection(blockedModifiers).isEmpty else {
+            return false
+        }
+        
+        guard let characters = event.characters,
+              !characters.isEmpty,
+              characters.rangeOfCharacter(from: .controlCharacters) == nil else {
+            return false
+        }
+        
+        return true
     }
     
     // MARK: - Gyorsbillentyűk (Command + 1..9, 0 és Cmd + Y)
