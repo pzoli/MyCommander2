@@ -235,6 +235,48 @@ struct FilePanelView: View {
                 let anchor: UnitPoint = movingDown ? .bottom : .top
                 scrollToSelection(selectedItemId, using: proxy, anchor: anchor, requestID: requestID)
             }
+            .onChange(of: panelState.filterText) { oldFilter, newFilter in
+                guard !oldFilter.isEmpty,
+                      newFilter.isEmpty,
+                      let selectedItemId = panelState.selectedItemId else {
+                    return
+                }
+                
+                scrollRequestID += 1
+                let requestID = scrollRequestID
+                DispatchQueue.main.async {
+                    guard requestID == self.scrollRequestID,
+                          self.panelState.selectedItemId == selectedItemId else {
+                        return
+                    }
+                    scrollToSelection(
+                        selectedItemId,
+                        using: proxy,
+                        anchor: .center,
+                        requestID: requestID
+                    )
+                }
+            }
+            .onChange(of: panelState.currentDirectory) { _, _ in
+                guard let selectedItemId = panelState.selectedItemId else {
+                    return
+                }
+                
+                scrollRequestID += 1
+                let requestID = scrollRequestID
+                DispatchQueue.main.async {
+                    guard requestID == self.scrollRequestID,
+                          self.panelState.selectedItemId == selectedItemId else {
+                        return
+                    }
+                    scrollToSelection(
+                        selectedItemId,
+                        using: proxy,
+                        anchor: .center,
+                        requestID: requestID
+                    )
+                }
+            }
         }
     }
     

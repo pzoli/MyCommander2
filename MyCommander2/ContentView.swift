@@ -272,6 +272,16 @@ struct ContentView: View {
             return nil
         }
         
+        // Enter a filter mezőből: előbb visszaadjuk a fókuszt a fő nézetnek,
+        // majd ugyanazt a listaműveletet hajtjuk végre, mint normál listafókusznál.
+        if (keyCode == 36 || keyCode == 76) &&
+            appState.activeDialog == nil &&
+            appState.currentActivePanel.isFilterFocused {
+            appState.currentActivePanel.isFilterFocused = false
+            NSApp.keyWindow?.makeFirstResponder(nil)
+            isWindowFocused = true
+        }
+        
         // 4. Fő nézet: Fájllista irányítása
         // A fel-le nyilak és Enter mindig a fájllistát vezérlik ha a parancssor nem kapott kifejezetten enter parancsot
         switch keyCode {
@@ -303,6 +313,10 @@ struct ContentView: View {
             return nil
             
         case 51: // Backspace -> Visszalépés a szülőkönyvtárba
+            // Fókuszált filter esetén a TextField kezelje a karakter törlését.
+            guard !appState.currentActivePanel.isFilterFocused else {
+                return event
+            }
             guard !appState.isCommandPromptFocused else {
                 return event
             }
