@@ -415,7 +415,11 @@ struct CopyMoveDialog: View {
         if !trimmed.isEmpty {
             let url: URL
             if sources.count == 1 && !trimmed.contains("/") {
-                url = initialDestination.appendingPathComponent(trimmed).standardizedFileURL
+                // Mozgatásnál a puszta fájlnév ugyanabban a könyvtárban átnevezést jelent.
+                let directory = isMove
+                    ? sources[0].deletingLastPathComponent()
+                    : initialDestination
+                url = directory.appendingPathComponent(trimmed).standardizedFileURL
             } else {
                 url = URL(fileURLWithPath: trimmed).standardizedFileURL
             }
