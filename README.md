@@ -1,6 +1,6 @@
 # MyCommander2
 
-This is a Midnight Commander like file manager writen in Swift. The idea first is to compare files using [Meld](https://gitlab.gnome.org/GNOME/meld).
+This is a Midnight Commander like file manager for MacOS 27+ writen in Swift. The idea first is to compare files using [Meld](https://gitlab.gnome.org/GNOME/meld).
 
 ## Keyboard shortcuts
 
