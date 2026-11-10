@@ -342,12 +342,14 @@ struct CopyMoveDialog: View {
                         .foregroundColor(.white)
                         .lineLimit(2)
                     
-                    Text("to target directory:")
+                    Text(sources.count == 1
+                         ? "to target directory or new file path:"
+                         : "to target directory:")
                         .font(MCTheme.monoBold)
                         .foregroundColor(.white)
                         .padding(.top, 4)
                     
-                    // Célkönyvtár beviteli mező automatikus fókusszal
+                    // Egyetlen fájlnál a célfájlt teljes útvonallal is meg lehet adni.
                     TextField("", text: $targetPath)
                         .textFieldStyle(.plain)
                         .font(MCTheme.monoFont)
@@ -411,7 +413,12 @@ struct CopyMoveDialog: View {
     private func submit() {
         let trimmed = targetPath.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
-            let url = URL(fileURLWithPath: trimmed).standardizedFileURL
+            let url: URL
+            if sources.count == 1 && !trimmed.contains("/") {
+                url = initialDestination.appendingPathComponent(trimmed).standardizedFileURL
+            } else {
+                url = URL(fileURLWithPath: trimmed).standardizedFileURL
+            }
             onConfirm(url)
         }
     }

@@ -138,19 +138,43 @@ class FileService {
     }
     
     /// Másolás
-    func copy(items: [URL], to targetFolder: URL) throws {
+    func copy(items: [URL], to target: URL) throws {
         for source in items {
-            let destination = targetFolder.appendingPathComponent(source.lastPathComponent)
+            let destination = try destinationURL(for: source, target: target, itemCount: items.count)
             try fileManager.copyItem(at: source, to: destination)
         }
     }
     
     /// Áthelyezés
-    func move(items: [URL], to targetFolder: URL) throws {
+    func move(items: [URL], to target: URL) throws {
         for source in items {
-            let destination = targetFolder.appendingPathComponent(source.lastPathComponent)
+            let destination = try destinationURL(for: source, target: target, itemCount: items.count)
             try fileManager.moveItem(at: source, to: destination)
         }
+    }
+    
+    /// Megadott célkönyvtár vagy egyetlen fájl teljes célútvonalának feloldása.
+    private func destinationURL(for source: URL, target: URL, itemCount: Int) throws -> URL {
+        var isDirectory: ObjCBool = false
+        if fileManager.fileExists(atPath: target.path, isDirectory: &isDirectory), isDirectory.boolValue {
+            return target.appendingPathComponent(source.lastPathComponent)
+        }
+        
+        guard itemCount == 1 else {
+            throw CocoaError(.fileNoSuchFile, userInfo: [
+                NSLocalizedDescriptionKey: "Több fájl másolásakor vagy mozgatásakor célkönyvtárat kell megadni."
+            ])
+        }
+        
+        let parentDirectory = target.deletingLastPathComponent()
+        guard fileManager.fileExists(atPath: parentDirectory.path, isDirectory: &isDirectory),
+              isDirectory.boolValue else {
+            throw CocoaError(.fileNoSuchFile, userInfo: [
+                NSLocalizedDescriptionKey: "A célkönyvtár nem létezik."
+            ])
+        }
+        
+        return target
     }
     
     /// Átnevezés
