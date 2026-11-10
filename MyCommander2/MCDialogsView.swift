@@ -35,6 +35,22 @@ struct MCDialogsView: View {
                 } onCancel: {
                     appState.activeDialog = nil
                 }
+            case .archive(let sources, let directory, let sourceDirectory):
+                ArchiveDialog(sources: sources, directory: directory) { archiveName in
+                    do {
+                        try FileService.shared.createTGZ(items: sources, named: archiveName, in: directory, relativeTo: sourceDirectory)
+                        let finalName = archiveName.lowercased().hasSuffix(".tgz") ? archiveName : archiveName + ".tgz"
+                        appState.statusMessage = "Created \(finalName)"
+                        appState.leftPanel.refresh()
+                        appState.rightPanel.refresh()
+                        appState.currentActivePanel.clearMarks()
+                    } catch {
+                        appState.statusMessage = "TGZ error: \(error.localizedDescription)"
+                    }
+                    appState.activeDialog = nil
+                } onCancel: {
+                    appState.activeDialog = nil
+                }
             case .move(let sources, let dest):
                 CopyMoveDialog(
                     isMove: true,
@@ -398,6 +414,92 @@ struct CopyMoveDialog: View {
             let url = URL(fileURLWithPath: trimmed).standardizedFileURL
             onConfirm(url)
         }
+    }
+}
+
+// MARK: - TGZ Archive Dialog
+struct ArchiveDialog: View {
+    let sources: [URL]
+    let directory: URL
+    let onConfirm: (String) -> Void
+    let onCancel: () -> Void
+
+    @State private var archiveName: String = "archive.tgz"
+    @FocusState private var isFieldFocused: Bool
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.65).ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(" Create TGZ Archive ")
+                    .font(MCTheme.monoBold)
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(red: 0.0, green: 0.8, blue: 0.8))
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Compress \(sources.count) item(s):")
+                        .font(MCTheme.monoBold)
+                        .foregroundColor(.yellow)
+                    Text(sources.map { $0.lastPathComponent }.joined(separator: ", "))
+                        .font(MCTheme.monoSmall)
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                    Text("Archive name in \(directory.lastPathComponent):")
+                        .font(MCTheme.monoBold)
+                        .foregroundColor(.white)
+                    TextField("archive.tgz", text: $archiveName)
+                        .textFieldStyle(.plain)
+                        .font(MCTheme.monoFont)
+                        .foregroundColor(.black)
+                        .padding(4)
+                        .background(Color.white)
+                        .border(Color.black, width: 1)
+                        .focused($isFieldFocused)
+                        .onSubmit { submit() }
+                }
+                .padding(.horizontal, 12)
+
+                HStack(spacing: 16) {
+                    Spacer()
+                    Button("[ OK ]") { submit() }
+                        .font(MCTheme.monoBold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(Color(red: 0.0, green: 0.5, blue: 0.5))
+                        .buttonStyle(.plain)
+                    Button("[ Cancel ]") { onCancel() }
+                        .font(MCTheme.monoBold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(Color.gray)
+                        .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 10)
+            }
+            .frame(width: 560)
+            .background(MCTheme.panelBackground)
+            .border(MCTheme.activeBorder, width: 2)
+            .shadow(radius: 12)
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { isFieldFocused = true }
+        }
+        .onKeyPress(.escape) {
+            onCancel()
+            return .handled
+        }
+    }
+
+    private func submit() {
+        let trimmed = archiveName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { onConfirm(trimmed) }
     }
 }
 

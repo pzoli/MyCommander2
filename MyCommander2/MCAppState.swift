@@ -180,6 +180,7 @@ enum ActiveDialog: Identifiable {
     case edit(URL)
     case copy(sources: [URL], destination: URL)
     case move(sources: [URL], destination: URL)
+    case archive(sources: [URL], directory: URL, sourceDirectory: URL)
     case mkdir(currentURL: URL)
     case delete(targets: [URL])
     case help
@@ -191,6 +192,7 @@ enum ActiveDialog: Identifiable {
         case .edit(let url): return "edit_\(url.path)"
         case .copy: return "copy"
         case .move: return "move"
+        case .archive: return "archive"
         case .mkdir: return "mkdir"
         case .delete: return "delete"
         case .help: return "help"
@@ -252,8 +254,13 @@ class MCAppState {
         switch fnNumber {
         case 1: // Help
             activeDialog = .help
-        case 2: // Menu
-            statusMessage = "Use top menu bar or Tab/Arrows/Function keys."
+        case 2: // TGZ
+            let sources = selectedURLsOrCurrent()
+            if !sources.isEmpty {
+                activeDialog = .archive(sources: sources, directory: inactivePanel.currentDirectory, sourceDirectory: currentActivePanel.currentDirectory)
+            } else {
+                statusMessage = "Nothing selected to archive."
+            }
         case 3: // View
             if let item = currentActivePanel.selectedItem, !item.isDirectory {
                 activeDialog = .view(item.url)

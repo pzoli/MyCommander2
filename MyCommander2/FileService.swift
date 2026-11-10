@@ -194,6 +194,28 @@ class FileService {
         try process.run()
     }
     
+    /// Fájlok és könyvtárak tömörítése gzip-pelt tar archívumba.
+    func createTGZ(items: [URL], named name: String, in directory: URL, relativeTo sourceDirectory: URL) throws {
+        let archiveName = name.lowercased().hasSuffix(".tgz") ? name : "\(name).tgz"
+        let archiveURL = directory.appendingPathComponent(archiveName).standardizedFileURL
+        let sourceNames = items.map { $0.lastPathComponent }
+        guard !sourceNames.isEmpty else { return }
+
+        let process = Process()
+        let errorPipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+        process.arguments = ["-czf", archiveURL.path, "--"] + sourceNames
+        process.currentDirectoryURL = sourceDirectory
+        process.standardError = errorPipe
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            let errorOutput = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            throw NSError(domain: "FileService", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: errorOutput.isEmpty ? "tar failed" : errorOutput])
+        }
+    }
+
     /// Két fájl vagy könyvtár összehasonlítása Meld-del
     func compareWithMeld(file1: URL, file2: URL) throws {
         let process = Process()

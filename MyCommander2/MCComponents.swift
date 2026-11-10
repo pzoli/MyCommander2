@@ -194,7 +194,7 @@ struct FunctionBarView: View {
     
     private let labels = [
         (1, "Help"),
-        (2, "Menu"),
+        (2, "tgz"),
         (3, "View"),
         (4, "Edit"),
         (5, "Copy"),
