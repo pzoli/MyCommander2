@@ -4,6 +4,7 @@ import Observation
 
 @Observable
 class PanelState {
+    private let savedDirectoryKey: String?
     var currentDirectory: URL
     var items: [FileItem] = []
     var selectedItemId: String? = nil
@@ -16,7 +17,8 @@ class PanelState {
     var shouldFocusFilter: Bool = false
     var isFilterFocused: Bool = false
     
-    init(directory: URL) {
+    init(directory: URL, savedDirectoryKey: String? = nil) {
+        self.savedDirectoryKey = savedDirectoryKey
         self.currentDirectory = directory.standardizedFileURL
         refresh()
     }
@@ -100,6 +102,9 @@ class PanelState {
         let targetDir = directory.standardizedFileURL
         
         currentDirectory = targetDir
+        if let savedDirectoryKey {
+            UserDefaults.standard.set(targetDir.path, forKey: savedDirectoryKey)
+        }
         markedURLs.removeAll()
         filterText = ""
         refresh()
@@ -207,8 +212,23 @@ class MCAppState {
     
     init() {
         let home = FileService.shared.defaultDirectory
-        self.leftPanel = PanelState(directory: home)
-        self.rightPanel = PanelState(directory: home)
+        let leftDirectory = Self.savedDirectory(forKey: "leftPanelDirectory", fallback: home)
+        let rightDirectory = Self.savedDirectory(forKey: "rightPanelDirectory", fallback: home)
+        self.leftPanel = PanelState(directory: leftDirectory, savedDirectoryKey: "leftPanelDirectory")
+        self.rightPanel = PanelState(directory: rightDirectory, savedDirectoryKey: "rightPanelDirectory")
+    }
+    
+    private static func savedDirectory(forKey key: String, fallback: URL) -> URL {
+        guard
+            let path = UserDefaults.standard.string(forKey: key),
+            !path.isEmpty
+        else {
+            return fallback
+        }
+        
+        var isDirectory: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
+        return exists && isDirectory.boolValue ? URL(fileURLWithPath: path) : fallback
     }
     
     var currentActivePanel: PanelState {
