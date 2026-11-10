@@ -144,11 +144,37 @@ class FileService {
             try fileManager.copyItem(at: source, to: destination)
         }
     }
+
+    /// Másolás előre feloldott célútvonalakkal.
+    func copy(items: [URL], to destinations: [URL], overwriting: Set<URL>) throws {
+        guard items.count == destinations.count else { return }
+
+        for (source, destination) in zip(items, destinations) {
+            if fileManager.fileExists(atPath: destination.path) {
+                guard overwriting.contains(destination) else { continue }
+                try fileManager.removeItem(at: destination)
+            }
+            try fileManager.copyItem(at: source, to: destination)
+        }
+    }
     
     /// Áthelyezés
     func move(items: [URL], to target: URL) throws {
         for source in items {
             let destination = try destinationURL(for: source, target: target, itemCount: items.count)
+            try fileManager.moveItem(at: source, to: destination)
+        }
+    }
+
+    /// Áthelyezés előre feloldott célútvonalakkal.
+    func move(items: [URL], to destinations: [URL], overwriting: Set<URL>) throws {
+        guard items.count == destinations.count else { return }
+
+        for (source, destination) in zip(items, destinations) {
+            if fileManager.fileExists(atPath: destination.path) {
+                guard overwriting.contains(destination) else { continue }
+                try fileManager.removeItem(at: destination)
+            }
             try fileManager.moveItem(at: source, to: destination)
         }
     }
@@ -183,11 +209,44 @@ class FileService {
         try fileManager.moveItem(at: item, to: destination)
     }
     
-    /// Törlés (Kukába vagy közvetlen törlés)
+    /// Törlés rekurzívan: könyvtáraknál előbb a tartalom, majd maga a könyvtár törlődik.
     func delete(items: [URL]) throws {
         for item in items {
-            try fileManager.removeItem(at: item)
+            do {
+                try deleteRecursively(at: item)
+
+                // A törlés után ellenőrizzük a kijelölt gyökérelemet is.
+                // Ha valamiért megmaradt, egyben a Kukába helyezzük.
+                if fileManager.fileExists(atPath: item.path) {
+                    try fileManager.trashItem(at: item, resultingItemURL: nil)
+                }
+            } catch {
+                // Ha egy elem zárolt vagy a közvetlen törlés nem teljesül,
+                // a teljes kijelölt elemet egyben a Kukába helyezzük.
+                try fileManager.trashItem(at: item, resultingItemURL: nil)
+            }
         }
+    }
+
+    private func deleteRecursively(at url: URL) throws {
+        var isDirectory: ObjCBool = false
+        let exists = fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
+
+        guard exists else { return }
+
+        if isDirectory.boolValue {
+            let children = try fileManager.contentsOfDirectory(
+                at: url,
+                includingPropertiesForKeys: nil,
+                options: []
+            )
+
+            for child in children {
+                try deleteRecursively(at: child)
+            }
+        }
+
+        try fileManager.removeItem(at: url)
     }
     
     /// Új könyvtár létrehozása

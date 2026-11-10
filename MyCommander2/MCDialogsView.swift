@@ -21,10 +21,10 @@ struct MCDialogsView: View {
                     isMove: false,
                     sources: sources,
                     initialDestination: dest
-                ) { targetURL in
+                ) { destinations, overwriteDestinations in
                     do {
-                        try FileService.shared.copy(items: sources, to: targetURL)
-                        appState.statusMessage = "Copied \(sources.count) item(s) to \(targetURL.lastPathComponent)"
+                        try FileService.shared.copy(items: sources, to: destinations, overwriting: overwriteDestinations)
+                        appState.statusMessage = "Copied \(destinations.count) item(s)"
                         appState.leftPanel.refresh()
                         appState.rightPanel.refresh()
                         appState.currentActivePanel.clearMarks()
@@ -56,10 +56,10 @@ struct MCDialogsView: View {
                     isMove: true,
                     sources: sources,
                     initialDestination: dest
-                ) { targetURL in
+                ) { destinations, overwriteDestinations in
                     do {
-                        try FileService.shared.move(items: sources, to: targetURL)
-                        appState.statusMessage = "Moved \(sources.count) item(s) to \(targetURL.lastPathComponent)"
+                        try FileService.shared.move(items: sources, to: destinations, overwriting: overwriteDestinations)
+                        appState.statusMessage = "Moved \(destinations.count) item(s)"
                         appState.leftPanel.refresh()
                         appState.rightPanel.refresh()
                         appState.currentActivePanel.clearMarks()
@@ -310,10 +310,16 @@ struct CopyMoveDialog: View {
     let isMove: Bool
     let sources: [URL]
     let initialDestination: URL
-    let onConfirm: (URL) -> Void
+    let onConfirm: ([URL], Set<URL>) -> Void
     let onCancel: () -> Void
     
     @State private var targetPath: String = ""
+    @State private var conflictDestinations: [URL] = []
+    @State private var destinations: [URL] = []
+    @State private var overwriteDestinations: Set<URL> = []
+    @State private var conflictIndex = 0
+    @State private var isOverwriteDialogPresented = false
+    @State private var applyOverwriteChoiceToAll = false
     @FocusState private var isFieldFocused: Bool
     
     var body: some View {
@@ -394,6 +400,18 @@ struct CopyMoveDialog: View {
             .border(MCTheme.activeBorder, width: 2)
             .shadow(radius: 12)
         }
+        .overlay {
+            if isOverwriteDialogPresented,
+               conflictIndex < conflictDestinations.count {
+                OverwriteConfirmationDialog(
+                    destination: conflictDestinations[conflictIndex],
+                    applyToAll: $applyOverwriteChoiceToAll,
+                    onReplace: { resolveOverwrite(replace: true) },
+                    onSkip: { resolveOverwrite(replace: false) },
+                    onCancel: onCancel
+                )
+            }
+        }
         .onAppear {
             targetPath = initialDestination.path
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -412,18 +430,212 @@ struct CopyMoveDialog: View {
     
     private func submit() {
         let trimmed = targetPath.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            let url: URL
-            if sources.count == 1 && !trimmed.contains("/") {
-                // Mozgatásnál a puszta fájlnév ugyanabban a könyvtárban átnevezést jelent.
-                let directory = isMove
-                    ? sources[0].deletingLastPathComponent()
-                    : initialDestination
-                url = directory.appendingPathComponent(trimmed).standardizedFileURL
-            } else {
-                url = URL(fileURLWithPath: trimmed).standardizedFileURL
+        guard !trimmed.isEmpty else { return }
+
+        let fileManager = FileManager.default
+        var isDirectory: ObjCBool = false
+        let typedURL: URL
+
+        if fileManager.fileExists(atPath: trimmed, isDirectory: &isDirectory),
+           isDirectory.boolValue {
+            typedURL = URL(fileURLWithPath: trimmed).standardizedFileURL
+        } else if sources.count == 1 && !trimmed.contains("/") {
+            // Mozgatásnál a puszta fájlnév ugyanabban a könyvtárban átnevezést jelent.
+            let directory = isMove
+                ? sources[0].deletingLastPathComponent()
+                : initialDestination
+            typedURL = directory.appendingPathComponent(trimmed).standardizedFileURL
+        } else {
+            typedURL = URL(fileURLWithPath: trimmed).standardizedFileURL
+        }
+
+        let destinations: [URL]
+        if fileManager.fileExists(atPath: typedURL.path, isDirectory: &isDirectory),
+           isDirectory.boolValue {
+            destinations = sources.map {
+                typedURL.appendingPathComponent($0.lastPathComponent).standardizedFileURL
             }
-            onConfirm(url)
+        } else if sources.count == 1 {
+            destinations = [typedURL]
+        } else {
+            // Több elemhez csak célkönyvtár adható meg; a FileService adja a hibát.
+            onConfirm([typedURL], [])
+            return
+        }
+
+        self.destinations = destinations
+        overwriteDestinations = []
+        conflictDestinations = destinations.filter {
+            fileManager.fileExists(atPath: $0.path)
+        }
+        conflictIndex = 0
+        applyOverwriteChoiceToAll = false
+
+        if conflictDestinations.isEmpty {
+            onConfirm(destinations, overwriteDestinations)
+        } else {
+            isOverwriteDialogPresented = true
+        }
+    }
+
+    private func resolveOverwrite(replace: Bool) {
+        if applyOverwriteChoiceToAll {
+            if replace {
+                overwriteDestinations.formUnion(conflictDestinations.dropFirst(conflictIndex))
+            }
+            isOverwriteDialogPresented = false
+            onConfirm(destinations, overwriteDestinations)
+            return
+        }
+
+        if replace {
+            overwriteDestinations.insert(conflictDestinations[conflictIndex])
+        }
+
+        conflictIndex += 1
+        if conflictIndex >= conflictDestinations.count {
+            isOverwriteDialogPresented = false
+            onConfirm(destinations, overwriteDestinations)
+        }
+    }
+}
+
+struct OverwriteConfirmationDialog: View {
+    private enum FocusedControl: Hashable {
+        case applyToAll
+        case replace
+        case skip
+        case cancel
+    }
+
+    let destination: URL
+    @Binding var applyToAll: Bool
+    let onReplace: () -> Void
+    let onSkip: () -> Void
+    let onCancel: () -> Void
+    @FocusState private var isDialogFocused: Bool
+    @State private var focusedControl: FocusedControl = .replace
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.65).ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(" Confirm overwrite ")
+                    .font(MCTheme.monoBold)
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange)
+
+                Text("The following file already exists:")
+                    .font(MCTheme.monoBold)
+                    .foregroundColor(.white)
+
+                Text(destination.path)
+                    .font(MCTheme.monoSmall)
+                    .foregroundColor(.yellow)
+                    .lineLimit(2)
+
+                if focusedControl == .applyToAll {
+                    Toggle("Apply this choice to all overwrites", isOn: $applyToAll)
+                        .font(MCTheme.monoSmall)
+                        .foregroundColor(.white)
+                        .toggleStyle(.checkbox)
+                        .keyboardShortcut(.space)
+                } else {
+                    Toggle("Apply this choice to all overwrites", isOn: $applyToAll)
+                        .font(MCTheme.monoSmall)
+                        .foregroundColor(.white)
+                        .toggleStyle(.checkbox)
+                }
+
+                HStack(spacing: 12) {
+                    if focusedControl == .replace {
+                        Button("[ Replace ]", action: onReplace)
+                            .keyboardShortcut(.space)
+                            .background(Color.orange)
+                    } else {
+                        Button("[ Replace ]", action: onReplace)
+                            .background(Color.clear)
+                    }
+
+                    if focusedControl == .skip {
+                        Button("[ Skip ]", action: onSkip)
+                            .keyboardShortcut(.space)
+                            .background(Color.orange)
+                    } else {
+                        Button("[ Skip ]", action: onSkip)
+                            .background(Color.clear)
+                    }
+
+                    if focusedControl == .cancel {
+                        Button("[ Cancel ]", action: onCancel)
+                            .keyboardShortcut(.space)
+                            .background(Color.orange)
+                    } else {
+                        Button("[ Cancel ]", action: onCancel)
+                            .background(Color.clear)
+                    }
+                }
+                .font(MCTheme.monoBold)
+                .foregroundColor(.white)
+                .buttonStyle(.plain)
+            }
+            .padding(12)
+            .frame(width: 560)
+            .background(MCTheme.panelBackground)
+            .border(MCTheme.activeBorder, width: 2)
+            .shadow(radius: 12)
+        }
+        .focusable()
+        .focused($isDialogFocused)
+        .onKeyPress(characters: CharacterSet(charactersIn: "\t\u{19}")) { keyPress in
+            let isBackTab = keyPress.characters == "\u{19}"
+            let isShiftPressed = keyPress.modifiers.contains(.shift)
+            moveFocus(forward: !isBackTab && !isShiftPressed)
+            return .handled
+        }
+        .onKeyPress(.space) {
+            activateFocusedControl()
+            return .handled
+        }
+        .onKeyPress(characters: CharacterSet(charactersIn: "\r\n")) { _ in
+            activateFocusedControl()
+            return .handled
+        }
+        .onAppear {
+            DispatchQueue.main.async {
+                isDialogFocused = true
+                focusedControl = .replace
+            }
+        }
+    }
+
+    private func moveFocus(forward: Bool) {
+        switch focusedControl {
+        case .replace:
+            focusedControl = .skip
+        case .skip:
+            focusedControl = .cancel
+        case .cancel:
+            focusedControl = .applyToAll
+        case .applyToAll:
+            focusedControl = .replace
+        }
+    }
+
+    private func activateFocusedControl() {
+        switch focusedControl {
+        case .applyToAll:
+            applyToAll.toggle()
+        case .replace:
+            onReplace()
+        case .skip:
+            onSkip()
+        case .cancel:
+            onCancel()
         }
     }
 }
