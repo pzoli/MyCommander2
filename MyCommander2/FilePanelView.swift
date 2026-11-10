@@ -6,7 +6,9 @@ struct FilePanelView: View {
     let isActive: Bool
     let onSelect: () -> Void
     let onOpen: () -> Void
-    @State private var visibleRowIDs: Set<String> = []
+    @State private var rowFrames: [String: CGRect] = [:]
+    @State private var scrollViewportHeight: CGFloat = 0
+    @State private var scrollRequestID = 0
     @FocusState private var isFilterFocused: Bool
     
     var body: some View {
@@ -189,33 +191,49 @@ struct FilePanelView: View {
                                 panelState.toggleMark(for: item.url)
                             }
                         )
-                        .onGeometryChange(for: Bool.self) { geometry in
-                            let frame = geometry.frame(in: .scrollView)
-                            let bounds = geometry.bounds(of: .scrollView) ?? .zero
-                            let visibleBounds = CGRect(origin: .zero, size: bounds.size)
-                            return frame.height > 0 && visibleBounds.contains(frame)
-                        } action: { isVisible in
-                            if isVisible {
-                                visibleRowIDs.insert(item.id)
-                            } else {
-                                visibleRowIDs.remove(item.id)
-                            }
+                        .onGeometryChange(for: CGRect.self) { geometry in
+                            geometry.frame(in: .scrollView)
+                        } action: { frame in
+                            rowFrames[item.id] = frame
                         }
                         .id(item.id)
                     }
                 }
                 .padding(.vertical, 2)
             }
+            .onGeometryChange(for: CGFloat.self) { geometry in
+                geometry.size.height
+            } action: { height in
+                scrollViewportHeight = height
+            }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .id(panelState.currentDirectory.path)
             .onChange(of: panelState.selectedIndex) { oldIndex, newIndex in
-                guard let selectedItemId = panelState.selectedItemId,
-                      !visibleRowIDs.contains(selectedItemId) else {
+                scrollRequestID += 1
+                let requestID = scrollRequestID
+                
+                guard oldIndex != newIndex,
+                      oldIndex >= 0,
+                      oldIndex < panelState.filteredItems.count,
+                      let selectedItemId = panelState.selectedItemId,
+                      let previousFrame = rowFrames[panelState.filteredItems[oldIndex].id],
+                      scrollViewportHeight > 0 else {
                     return
                 }
                 
-                let anchor: UnitPoint = newIndex < oldIndex ? .top : .bottom
-                scrollToSelection(selectedItemId, using: proxy, anchor: anchor)
+                let movingDown = newIndex > oldIndex
+                let movingUp = newIndex < oldIndex
+                let rowHeight = max(previousFrame.height, 1)
+                let reachedBottom = previousFrame.maxY + rowHeight > scrollViewportHeight
+                let reachedTop = previousFrame.minY - rowHeight < 0
+                
+                guard (movingDown && reachedBottom) || (movingUp && reachedTop) else {
+                    return
+                }
+                
+                // A következő iránygombnál azonnal a megfelelő szélre gördítünk.
+                let anchor: UnitPoint = movingDown ? .bottom : .top
+                scrollToSelection(selectedItemId, using: proxy, anchor: anchor, requestID: requestID)
             }
         }
     }
@@ -281,7 +299,8 @@ struct FilePanelView: View {
     private func scrollToSelection(
         _ newId: String?,
         using proxy: ScrollViewProxy,
-        anchor: UnitPoint
+        anchor: UnitPoint,
+        requestID: Int
     ) {
         guard let newId else { return }
         
@@ -289,6 +308,11 @@ struct FilePanelView: View {
         // elérhetők a ScrollViewReader számára. Animáció nélkül görgetünk,
         // hogy gyors billentyűismétlésnél ne torlódjanak fel régi célpontok.
         DispatchQueue.main.async {
+            guard requestID == self.scrollRequestID,
+                  self.panelState.selectedItemId == newId else {
+                return
+            }
+            
             var transaction = Transaction()
             transaction.animation = nil
             withTransaction(transaction) {
