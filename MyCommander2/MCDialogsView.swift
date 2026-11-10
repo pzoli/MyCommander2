@@ -237,9 +237,10 @@ struct FileEditorDialog: View {
                 
                 // Lábléc gombokkal
                 HStack(spacing: 12) {
-                    Button("[ F2 / Save ]") {
+                    Button("[ ⌘S / Save ]") {
                         save()
                     }
+                    .keyboardShortcut("s", modifiers: .command)
                     .font(MCTheme.monoBold)
                     .foregroundColor(.black)
                     .buttonStyle(.plain)
