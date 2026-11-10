@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct MCDialogsView: View {
     @Bindable var appState: MCAppState
@@ -515,6 +516,7 @@ struct OverwriteConfirmationDialog: View {
     let onCancel: () -> Void
     @FocusState private var isDialogFocused: Bool
     @State private var focusedControl: FocusedControl = .replace
+    @State private var localKeyMonitor: Any?
 
     var body: some View {
         ZStack {
@@ -591,12 +593,6 @@ struct OverwriteConfirmationDialog: View {
         }
         .focusable()
         .focused($isDialogFocused)
-        .onKeyPress(characters: CharacterSet(charactersIn: "\t\u{19}")) { keyPress in
-            let isBackTab = keyPress.characters == "\u{19}"
-            let isShiftPressed = keyPress.modifiers.contains(.shift)
-            moveFocus(forward: !isBackTab && !isShiftPressed)
-            return .handled
-        }
         .onKeyPress(.space) {
             activateFocusedControl()
             return .handled
@@ -609,20 +605,63 @@ struct OverwriteConfirmationDialog: View {
             DispatchQueue.main.async {
                 isDialogFocused = true
                 focusedControl = .replace
+                setupLocalKeyMonitor()
             }
+        }
+        .onDisappear {
+            removeLocalKeyMonitor()
+        }
+    }
+
+    private func setupLocalKeyMonitor() {
+        guard localKeyMonitor == nil else { return }
+
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.keyCode == 48 {
+                let isShiftPressed = event.modifierFlags.contains(.shift)
+                moveFocus(forward: !isShiftPressed)
+                return nil
+            }
+
+            if event.keyCode == 36 || event.keyCode == 76 {
+                activateFocusedControl()
+                return nil
+            }
+
+            return event
+        }
+    }
+
+    private func removeLocalKeyMonitor() {
+        if let localKeyMonitor {
+            NSEvent.removeMonitor(localKeyMonitor)
+            self.localKeyMonitor = nil
         }
     }
 
     private func moveFocus(forward: Bool) {
-        switch focusedControl {
-        case .replace:
-            focusedControl = .skip
-        case .skip:
-            focusedControl = .cancel
-        case .cancel:
-            focusedControl = .applyToAll
-        case .applyToAll:
-            focusedControl = .replace
+        if forward {
+            switch focusedControl {
+            case .replace:
+                focusedControl = .skip
+            case .skip:
+                focusedControl = .cancel
+            case .cancel:
+                focusedControl = .applyToAll
+            case .applyToAll:
+                focusedControl = .replace
+            }
+        } else {
+            switch focusedControl {
+            case .replace:
+                focusedControl = .applyToAll
+            case .skip:
+                focusedControl = .replace
+            case .cancel:
+                focusedControl = .skip
+            case .applyToAll:
+                focusedControl = .cancel
+            }
         }
     }
 
