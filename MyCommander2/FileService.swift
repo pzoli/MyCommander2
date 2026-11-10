@@ -215,6 +215,110 @@ class FileService {
         try process.run()
     }
     
+    /// Két könyvtár különböző elemeinek meghatározása panelenként
+    func findDirectoryDifferences(left: URL, right: URL) -> (left: Set<URL>, right: Set<URL>) {
+        let leftItems = loadDirectory(at: left, showHidden: true)
+            .filter { !$0.isParentDir }
+        let rightItems = loadDirectory(at: right, showHidden: true)
+            .filter { !$0.isParentDir }
+        
+        let leftByName = Dictionary(uniqueKeysWithValues: leftItems.map { ($0.name, $0) })
+        let rightByName = Dictionary(uniqueKeysWithValues: rightItems.map { ($0.name, $0) })
+        let allNames = Set(leftByName.keys).union(rightByName.keys)
+        
+        var leftDifferences: Set<URL> = []
+        var rightDifferences: Set<URL> = []
+        
+        for name in allNames {
+            guard let leftItem = leftByName[name] else {
+                if let rightItem = rightByName[name] {
+                    rightDifferences.insert(rightItem.url)
+                }
+                continue
+            }
+            
+            guard let rightItem = rightByName[name] else {
+                leftDifferences.insert(leftItem.url)
+                continue
+            }
+            
+            let typeDiffers = leftItem.isDirectory != rightItem.isDirectory
+            let metadataDiffers = !leftItem.isDirectory &&
+                (leftItem.size != rightItem.size ||
+                 abs(leftItem.modificationDate.timeIntervalSince(rightItem.modificationDate)) > 1)
+            
+            if typeDiffers || metadataDiffers {
+                leftDifferences.insert(leftItem.url)
+                rightDifferences.insert(rightItem.url)
+            }
+        }
+        
+        return (leftDifferences, rightDifferences)
+    }
+    
+    /// Két könyvtár közvetlen tartalmának összehasonlítása Total Commander-szerű riporttal
+    func compareDirectories(left: URL, right: URL) -> String {
+        let leftItems = loadDirectory(at: left, showHidden: true)
+            .filter { !$0.isParentDir }
+        let rightItems = loadDirectory(at: right, showHidden: true)
+            .filter { !$0.isParentDir }
+        
+        let leftByName = Dictionary(uniqueKeysWithValues: leftItems.map { ($0.name, $0) })
+        let rightByName = Dictionary(uniqueKeysWithValues: rightItems.map { ($0.name, $0) })
+        let allNames = Set(leftByName.keys).union(rightByName.keys)
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+        
+        var onlyLeft: [String] = []
+        var onlyRight: [String] = []
+        var different: [String] = []
+        var identicalCount = 0
+        
+        for name in allNames {
+            guard let leftItem = leftByName[name] else {
+                onlyRight.append(name)
+                continue
+            }
+            guard let rightItem = rightByName[name] else {
+                onlyLeft.append(name)
+                continue
+            }
+            
+            if leftItem.isDirectory != rightItem.isDirectory {
+                different.append("\(name) (type differs)")
+            } else if !leftItem.isDirectory &&
+                        (leftItem.size != rightItem.size ||
+                         abs(leftItem.modificationDate.timeIntervalSince(rightItem.modificationDate)) > 1) {
+                different.append("\(name) (content metadata differs)")
+            } else {
+                identicalCount += 1
+            }
+        }
+        
+        var lines = [
+            "Directory comparison",
+            "Left:  \(left.path)",
+            "Right: \(right.path)",
+            ""
+        ]
+        
+        if onlyLeft.isEmpty && onlyRight.isEmpty && different.isEmpty {
+            lines.append("Directories are identical.")
+        } else {
+            lines.append("Only in left:")
+            lines.append(contentsOf: onlyLeft.isEmpty ? ["  (none)"] : onlyLeft.map { "  \($0)" })
+            lines.append("")
+            lines.append("Only in right:")
+            lines.append(contentsOf: onlyRight.isEmpty ? ["  (none)"] : onlyRight.map { "  \($0)" })
+            lines.append("")
+            lines.append("Different:")
+            lines.append(contentsOf: different.isEmpty ? ["  (none)"] : different.map { "  \($0)" })
+            lines.append("")
+            lines.append("Identical entries: \(identicalCount)")
+        }
+        
+        return lines.joined(separator: "\n")
+    }
+    
     /// Shell parancs futtatása
     func executeShellCommand(_ command: String, workingDirectory: URL) -> (output: String, error: String?, exitCode: Int32) {
         let process = Process()

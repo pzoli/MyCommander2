@@ -35,6 +35,7 @@ struct TopMenuBarView: View {
             
             menuItem(title: "Command") {
                 Button("Compare with Meld (⌘Y)") { appState.compareWithMeld() }
+                Button("Compare Directories (⌘⇧2)") { appState.compareDirectories() }
                 Button("Sync Opposite Panel Directory (⌘L)") {
                     appState.syncInactivePanelDirectory()
                 }

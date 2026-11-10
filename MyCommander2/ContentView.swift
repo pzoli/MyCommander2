@@ -187,6 +187,16 @@ struct ContentView: View {
             return nil
         }
         
+        // Cmd + Shift + 2: A két panel könyvtárainak összehasonlítása
+        let isTwoKey = (keyCode == 19 || event.charactersIgnoringModifiers?.contains("2") == true)
+        if event.modifierFlags.contains(.command) &&
+            event.modifierFlags.contains(.shift) &&
+            isTwoKey &&
+            appState.activeDialog == nil {
+            appState.compareDirectories()
+            return nil
+        }
+        
         // 3. Cmd + Y: Összehasonlítás Meld-del
         let isYKey = (keyCode == 16 || event.charactersIgnoringModifiers?.lowercased() == "y")
         if event.modifierFlags.contains(.command) && isYKey {

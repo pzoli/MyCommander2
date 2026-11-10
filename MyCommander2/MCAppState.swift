@@ -329,6 +329,28 @@ class MCAppState {
         }
     }
     
+    func compareDirectories() {
+        let differences = FileService.shared.findDirectoryDifferences(
+            left: leftPanel.currentDirectory,
+            right: rightPanel.currentDirectory
+        )
+        
+        leftPanel.clearMarks()
+        rightPanel.clearMarks()
+        
+        for url in differences.left {
+            leftPanel.markedURLs.insert(url)
+        }
+        for url in differences.right {
+            rightPanel.markedURLs.insert(url)
+        }
+        
+        let differenceCount = differences.left.count + differences.right.count
+        statusMessage = differenceCount == 0
+            ? "Directories are identical."
+            : "\(differenceCount) differing item(s) marked."
+    }
+    
     func runCommand() {
         let trimmed = commandInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
