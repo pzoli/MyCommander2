@@ -187,7 +187,14 @@ struct ContentView: View {
             return nil
         }
         
-        // 3. Cmd + R: Az aktív panel könyvtárának frissítése
+        // 3. Cmd + H: A két panelben látható könyvtárak felcserélése
+        let isHKey = (keyCode == 4 || event.charactersIgnoringModifiers?.lowercased() == "h")
+        if event.modifierFlags.contains(.command) && isHKey && appState.activeDialog == nil {
+            appState.swapPanelDirectories()
+            return nil
+        }
+        
+        // 4. Cmd + R: Az aktív panel könyvtárának frissítése
         let isRKey = (keyCode == 15 || event.charactersIgnoringModifiers?.lowercased() == "r")
         if event.modifierFlags.contains(.command) && isRKey && appState.activeDialog == nil {
             appState.currentActivePanel.refresh()

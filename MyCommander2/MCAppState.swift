@@ -97,6 +97,27 @@ class PanelState {
         }
     }
     
+    func swapContent(with other: PanelState) {
+        swap(&currentDirectory, &other.currentDirectory)
+        swap(&items, &other.items)
+        swap(&selectedItemId, &other.selectedItemId)
+        swap(&selectedIndex, &other.selectedIndex)
+        swap(&markedURLs, &other.markedURLs)
+        swap(&sortField, &other.sortField)
+        swap(&sortOrder, &other.sortOrder)
+        swap(&showHidden, &other.showHidden)
+        swap(&filterText, &other.filterText)
+        swap(&shouldFocusFilter, &other.shouldFocusFilter)
+        swap(&isFilterFocused, &other.isFilterFocused)
+        
+        if let savedDirectoryKey {
+            UserDefaults.standard.set(currentDirectory.path, forKey: savedDirectoryKey)
+        }
+        if let savedDirectoryKey = other.savedDirectoryKey {
+            UserDefaults.standard.set(other.currentDirectory.path, forKey: savedDirectoryKey)
+        }
+    }
+    
     func navigateTo(directory: URL) {
         let previousDir = currentDirectory
         let targetDir = directory.standardizedFileURL
@@ -247,6 +268,11 @@ class MCAppState {
     
     func syncInactivePanelDirectory() {
         inactivePanel.navigateTo(directory: currentActivePanel.currentDirectory)
+    }
+    
+    func swapPanelDirectories() {
+        leftPanel.swapContent(with: rightPanel)
+        activePanel = activePanel == .left ? .right : .left
     }
     
     // Műveletek elindítása az aktív panel alapján
