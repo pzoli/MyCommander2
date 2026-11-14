@@ -187,6 +187,13 @@ struct ContentView: View {
             return nil
         }
         
+        // 3. Cmd + R: Az aktív panel könyvtárának frissítése
+        let isRKey = (keyCode == 15 || event.charactersIgnoringModifiers?.lowercased() == "r")
+        if event.modifierFlags.contains(.command) && isRKey && appState.activeDialog == nil {
+            appState.currentActivePanel.refresh()
+            return nil
+        }
+        
         // Cmd + Shift + 2: A két panel könyvtárainak összehasonlítása
         let isTwoKey = (keyCode == 19 || event.charactersIgnoringModifiers?.contains("2") == true)
         if event.modifierFlags.contains(.command) &&
