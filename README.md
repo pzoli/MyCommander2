@@ -10,6 +10,7 @@ This is a Midnight Commander like file manager for MacOS 27+ writen in Swift. Th
 - CMD + Enter (insert the name of the current item into the command line)
 - CMD + 1–8 (functions found in the bottom menu)
 - CMD + Shift + 2 (compare directories)
+- CMD + R (Refresh actuale panel)
 - Backspace (go to parent directory)
 
 ### In the built-in text editor:
