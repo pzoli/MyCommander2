@@ -988,6 +988,8 @@ struct HelpDialog: View {
                         helpRow("Up / Down", "Move cursor through items")
                         helpRow("Enter / Double Click", "Enter directory or view file")
                         helpRow("Space / [*]", "Select / Tag items for multi-action")
+                        helpRow("⌘A", "Select all items in active panel")
+                        helpRow("⌘C", "Invert selection in active panel")
                         helpRow("F1 / ⌘1", "Show this help screen")
                         helpRow("F3 / ⌘3", "View selected file")
                         helpRow("F4 / ⌘4", "Edit selected file")

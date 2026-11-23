@@ -107,6 +107,20 @@ struct ContentView: View {
             }
             return .ignored
         }
+        .onKeyPress(KeyEquivalent("a"), phases: .down) { press in
+            guard press.modifiers == .command else { return .ignored }
+            guard appState.activeDialog == nil else { return .ignored }
+            guard !isTextInputFocused else { return .ignored }
+            appState.currentActivePanel.selectAll()
+            return .handled
+        }
+        .onKeyPress(KeyEquivalent("c"), phases: .down) { press in
+            guard press.modifiers == .command else { return .ignored }
+            guard appState.activeDialog == nil else { return .ignored }
+            guard !isTextInputFocused else { return .ignored }
+            appState.currentActivePanel.invertSelection()
+            return .handled
+        }
         .onAppear {
             activateAppAndFocus()
             setupKeyboardMonitor()
@@ -198,6 +212,32 @@ struct ContentView: View {
         let isRKey = (keyCode == 15 || event.charactersIgnoringModifiers?.lowercased() == "r")
         if event.modifierFlags.contains(.command) && isRKey && appState.activeDialog == nil {
             appState.currentActivePanel.refresh()
+            return nil
+        }
+        
+        // 5. Cmd + A: Az aktív panel összes elemének kijelölése
+        let isAKey = (keyCode == 0 || event.charactersIgnoringModifiers?.lowercased() == "a")
+        if event.modifierFlags.contains(.command) &&
+            !event.modifierFlags.contains(.shift) &&
+            !event.modifierFlags.contains(.control) &&
+            !event.modifierFlags.contains(.option) &&
+            isAKey &&
+            appState.activeDialog == nil &&
+            !isTextInputFocused {
+            appState.currentActivePanel.selectAll()
+            return nil
+        }
+        
+        // 6. Cmd + C: Az aktív panel kijelöléseinek megfordítása (ha nincs fókuszált szövegbeviteli mező)
+        let isCKey = (keyCode == 8 || event.charactersIgnoringModifiers?.lowercased() == "c")
+        if event.modifierFlags.contains(.command) &&
+            !event.modifierFlags.contains(.shift) &&
+            !event.modifierFlags.contains(.control) &&
+            !event.modifierFlags.contains(.option) &&
+            isCKey &&
+            appState.activeDialog == nil &&
+            !isTextInputFocused {
+            appState.currentActivePanel.invertSelection()
             return nil
         }
         

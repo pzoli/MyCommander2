@@ -160,8 +160,20 @@ class PanelState {
     }
     
     func selectAll() {
-        for item in items where !item.isParentDir {
+        let targets = filterText.isEmpty ? items : filteredItems
+        for item in targets where !item.isParentDir {
             markedURLs.insert(item.url)
+        }
+    }
+    
+    func invertSelection() {
+        let targets = filterText.isEmpty ? items : filteredItems
+        for item in targets where !item.isParentDir {
+            if markedURLs.contains(item.url) {
+                markedURLs.remove(item.url)
+            } else {
+                markedURLs.insert(item.url)
+            }
         }
     }
     

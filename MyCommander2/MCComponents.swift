@@ -29,7 +29,8 @@ struct TopMenuBarView: View {
                 Divider()
                 Button("Compare with Meld (⌘Y)") { appState.compareWithMeld() }
                 Divider()
-                Button("Select / Tag All") { appState.currentActivePanel.selectAll() }
+                Button("Select / Tag All (⌘A)") { appState.currentActivePanel.selectAll() }
+                Button("Invert Selection (⌘C)") { appState.currentActivePanel.invertSelection() }
                 Button("Clear Selection") { appState.currentActivePanel.clearMarks() }
             }
             
